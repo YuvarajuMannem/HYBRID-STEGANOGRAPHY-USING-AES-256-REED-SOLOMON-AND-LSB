@@ -1,0 +1,4 @@
+Pillow
+reedsolo
+pycryptodome
+numpy
