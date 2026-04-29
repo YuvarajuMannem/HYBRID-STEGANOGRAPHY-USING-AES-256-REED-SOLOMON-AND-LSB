@@ -51,8 +51,9 @@ function App() {
     if (mode === 'embed') formData.append('secret', secret);
 
     try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       const response = await axios.post(
-        `http://localhost:5000/api/${mode}`,
+        `${API_URL}/api/${mode}`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
@@ -169,7 +170,7 @@ function App() {
             {result.image && (
               <img src={result.image} alt="Stego" style={styles.resultImage} />
             )}
-            <a href={`http://localhost:5000${result.downloadUrl}`} download>
+            <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${result.downloadUrl}`} download>
               <button style={styles.downloadButton}>
                 <Download size={18} /> Download Stego Image
               </button>
