@@ -31,7 +31,7 @@ app.post('/api/embed', upload.single('image'), (req, res) => {
     const imagePath = req.file.path;
     const outputPath = `outputs/${uuidv4()}.png`;
     
-    const command = `python ../python-engine/steganography.py embed "${imagePath}" "${secret}" "${password}" "${outputPath}"`;
+    const command = `python3 ../python-engine/steganography.py embed "${imagePath}" "${secret}" "${password}" "${outputPath}"`;
     
     exec(command, (error, stdout, stderr) => {
       if (error) {
@@ -64,7 +64,7 @@ app.post('/api/extract', upload.single('stegoImage'), (req, res) => {
     const { password } = req.body;
     const stegoPath = req.file.path;
     
-    const command = `python ../python-engine/steganography.py extract "${stegoPath}" "${password}"`;
+    const command = `python3 ../python-engine/steganography.py extract "${stegoPath}" "${password}"`;
     
     exec(command, (error, stdout, stderr) => {
       fs.unlinkSync(stegoPath); // Cleanup
