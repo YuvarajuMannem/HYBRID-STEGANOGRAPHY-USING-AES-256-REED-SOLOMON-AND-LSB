@@ -2,3 +2,5 @@ Pillow
 reedsolo
 pycryptodome
 numpy
+scikit-image
+opencv-python-headless
