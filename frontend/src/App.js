@@ -1,356 +1,266 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import { Lock, Unlock, Upload, Download, Shield, Zap } from 'lucide-react';
+import { Upload, Lock, Unlock, ShieldAlert, Image as ImageIcon, Activity, Cpu, ArrowRight, Download, BarChart2 } from 'lucide-react';
+import './index.css';
 
 function App() {
-  const [mode, setMode] = useState('embed'); // 'embed' or 'extract'
-  const [image, setImage] = useState(null);
+  const [mode, setMode] = useState('embed');
+  const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [secret, setSecret] = useState('');
   const [password, setPassword] = useState('');
-  const [result, setResult] = useState(null);
+  
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [resultImage, setResultImage] = useState(null);
+  const [extractedText, setExtractedText] = useState('');
+  const [metrics, setMetrics] = useState(null);
+  const [error, setError] = useState('');
 
-  const handleImageDrop = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImage(file);
-      setPreview(URL.createObjectURL(file));
-      setError(null);
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const droppedFile = e.dataTransfer ? e.dataTransfer.files[0] : e.target.files[0];
+    if (droppedFile) {
+      setFile(droppedFile);
+      setPreview(URL.createObjectURL(droppedFile));
+      setResultImage(null);
+      setMetrics(null);
+      setExtractedText('');
     }
   };
 
-  const handleModeSwitch = (newMode) => {
-    setMode(newMode);
-    setImage(null);
-    setPreview(null);
-    setSecret('');
-    setPassword('');
-    setResult(null);
-    setError(null);
-  };
-
-  const handleSubmit = async () => {
-    if (!image || !password) {
-      setError('Please provide image and password');
+  const processEmbed = async () => {
+    if (!file || !secret || !password) {
+      setError('Please provide image, secret, and password.');
       return;
     }
-    if (mode === 'embed' && !secret) {
-      setError('Please enter secret message');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long for AES encryption.');
       return;
     }
-
     setLoading(true);
-    setError(null);
-    setResult(null);
-
+    setError('');
+    
     const formData = new FormData();
-    formData.append(mode === 'embed' ? 'image' : 'stegoImage', image);
+    formData.append('image', file);
+    formData.append('secret', secret);
     formData.append('password', password);
-    if (mode === 'embed') formData.append('secret', secret);
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      const response = await axios.post(
-        `${API_URL}/api/${mode}`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
-      setResult(response.data);
+      const response = await fetch('http://localhost:5000/api/embed', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      
+      setResultImage(data.image);
+      setMetrics(data.metrics);
     } catch (err) {
-      setError(err.response?.data?.error || 'Operation failed');
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const processExtract = async () => {
+    if (!file || !password) {
+      setError('Please provide stego image and password.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long for AES decryption.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    
+    const formData = new FormData();
+    formData.append('stegoImage', file);
+    formData.append('password', password);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/extract', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      
+      setExtractedText(data.secret);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        {/* Header */}
-        <div style={styles.header}>
-          <Shield size={40} color="#6366f1" />
-          <h1 style={styles.title}>Hybrid Steganography</h1>
-          <p style={styles.subtitle}>AES-256 + Reed-Solomon + LSB System</p>
+    <div className="dashboard-layout">
+      <header className="topbar">
+        <div className="logo">
+          <ShieldAlert size={28} />
+          <span style={{color: '#fff', letterSpacing: '1px'}}>HYBRID STEGANOGRAPHY USING AES-256, REED-SOLOMON, AND LSB</span>
         </div>
-
-        {/* Mode Toggle */}
-        <div style={styles.toggleContainer}>
-          <button
-            onClick={() => handleModeSwitch('embed')}
-            style={{
-              ...styles.toggleButton,
-              backgroundColor: mode === 'embed' ? '#6366f1' : '#1e293b',
-            }}
-          >
-            <Lock size={18} /> Hide Data
-          </button>
-          <button
-            onClick={() => handleModeSwitch('extract')}
-            style={{
-              ...styles.toggleButton,
-              backgroundColor: mode === 'extract' ? '#6366f1' : '#1e293b',
-            }}
-          >
-            <Unlock size={18} /> Extract Data
-          </button>
+        <div style={{color: 'var(--primary)', fontSize: '0.875rem', fontWeight: 'bold'}}>
+          Advanced IQA Dashboard • Final Year SDP Project
         </div>
+      </header>
 
-        {/* Image Upload */}
-        <div style={styles.uploadArea}>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageDrop}
-            style={{ display: 'none' }}
-            id="imageUpload"
-          />
-          <label htmlFor="imageUpload" style={styles.uploadLabel}>
-            {preview ? (
-              <img src={preview} alt="Preview" style={styles.preview} />
-            ) : (
-              <div style={styles.uploadPlaceholder}>
-                <Upload size={48} color="#64748b" />
-                <p>Click to upload {mode === 'embed' ? 'cover' : 'stego'} image</p>
-              </div>
-            )}
-          </label>
-        </div>
-
-        {/* Secret Input (Embed mode only) */}
-        {mode === 'embed' && (
-          <textarea
-            placeholder="Enter your secret message..."
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-            style={styles.textarea}
-            rows={4}
-          />
-        )}
-
-        {/* Password Input */}
-        <input
-          type="password"
-          placeholder="Enter encryption password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={styles.input}
-        />
-
-        {/* Submit Button */}
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          style={{
-            ...styles.submitButton,
-            opacity: loading ? 0.7 : 1,
-          }}
-        >
-          {loading ? (
-            'Processing...'
-          ) : mode === 'embed' ? (
-            <><Lock size={18} /> Hide Secret</>
-          ) : (
-            <><Unlock size={18} /> Extract Secret</>
-          )}
-        </button>
-
-        {/* Error Display */}
-        {error && (
-          <div style={styles.errorBox}>
-            {error}
+      <main className="main-content">
+        <div className="left-panel panel">
+          <div className="tabs">
+            <button className={`tab-btn ${mode === 'embed' ? 'active' : ''}`} onClick={() => {setMode('embed'); setFile(null); setPreview(null);}}>
+              Encode Secret
+            </button>
+            <button className={`tab-btn ${mode === 'extract' ? 'active' : ''}`} onClick={() => {setMode('extract'); setFile(null); setPreview(null);}}>
+              Decode Stego
+            </button>
           </div>
-        )}
 
-        {/* Result Display */}
-        {result && mode === 'embed' && (
-          <div style={styles.resultBox}>
-            <h3>✅ Data Hidden Successfully!</h3>
-            {result.image && (
-              <img src={result.image} alt="Stego" style={styles.resultImage} />
-            )}
-            <a href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${result.downloadUrl}`} download>
-              <button style={styles.downloadButton}>
-                <Download size={18} /> Download Stego Image
-              </button>
-            </a>
+          <div 
+            className="file-drop" 
+            onDragOver={(e) => e.preventDefault()} 
+            onDrop={handleDrop}
+            onClick={() => document.getElementById('fileInput').click()}
+          >
+            <input type="file" id="fileInput" hidden onChange={handleDrop} accept="image/*" />
+            <Upload size={40} style={{margin: '0 auto 1rem', color: 'var(--primary)'}}/>
+            <h3>{preview ? 'Change Image' : 'Drop Image Here'}</h3>
+            <p style={{fontSize: '0.875rem', color: 'var(--text-muted)'}}>PNG or JPG (Max 5MB)</p>
           </div>
-        )}
 
-        {result && mode === 'extract' && (
-          <div style={styles.resultBox}>
-            <h3>✅ Secret Extracted!</h3>
-            <div style={styles.secretDisplay}>
-              <strong>Hidden Message:</strong>
-              <p>{result.secret}</p>
+          {mode === 'embed' && (
+            <div className="input-group">
+              <label>Secret Payload (Text)</label>
+              <textarea 
+                className="form-control" 
+                rows="3" 
+                placeholder="Enter highly classified data..."
+                value={secret}
+                onChange={(e) => setSecret(e.target.value)}
+              />
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Info Footer */}
-        <div style={styles.footer}>
-          <Zap size={16} color="#6366f1" />
-          <span>Zero Error Guarantee | AES-256 + Reed-Solomon + LSB</span>
+          <div className="input-group">
+            <label>Cryptographic Seed (AES-256 Password)</label>
+            <input 
+              type="password" 
+              className="form-control" 
+              placeholder="Enter encryption seed..."
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          {error && <div style={{color: '#ef4444', padding: '0.5rem', background: 'rgba(239,68,68,0.1)', borderRadius: '4px'}}>{error}</div>}
+
+          <button 
+            className="btn-primary" 
+            onClick={mode === 'embed' ? processEmbed : processExtract}
+            disabled={loading}
+          >
+            {loading ? <Activity className="animate-spin" /> : (mode === 'embed' ? <Lock size={20} /> : <Unlock size={20} />)}
+            {loading ? 'Processing Pipeline...' : (mode === 'embed' ? 'Execute Embedding Pipeline' : 'Run Extraction & Decryption')}
+          </button>
         </div>
-      </div>
+
+        <div className="right-panel panel">
+          <h2 style={{fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+            <BarChart2 size={24} color="var(--primary)"/> 
+            {mode === 'embed' ? 'Image Quality Assessment (IQA)' : 'Extraction Results'}
+          </h2>
+
+          {mode === 'embed' ? (
+            <>
+              {/* Architecture Vis */}
+              <div className="arch-flow">
+                <div className="arch-node">
+                  <div className="arch-icon"><Lock size={24} /></div>
+                  <span>AES-256</span>
+                </div>
+                <ArrowRight size={20} color="var(--text-muted)"/>
+                <div className="arch-node">
+                  <div className="arch-icon"><ShieldAlert size={24} /></div>
+                  <span>Reed-Solomon (EC)</span>
+                </div>
+                <ArrowRight size={20} color="var(--text-muted)"/>
+                <div className="arch-node">
+                  <div className="arch-icon"><Cpu size={24} /></div>
+                  <span>PRNG Spatial Scatter</span>
+                </div>
+                <ArrowRight size={20} color="var(--text-muted)"/>
+                <div className="arch-node">
+                  <div className="arch-icon"><ImageIcon size={24} /></div>
+                  <span>Stego Output</span>
+                </div>
+              </div>
+
+              {metrics && (
+                <div className="metrics-grid">
+                  <div className="metric-card">
+                    <div className="metric-label">PSNR (Peak Signal/Noise)</div>
+                    <div className="metric-value">{metrics.psnr} dB</div>
+                    <div style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem'}}>&gt; 40dB is mathematically invisible</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">SSIM (Structural Similarity)</div>
+                    <div className="metric-value">{(metrics.ssim * 100).toFixed(2)}%</div>
+                    <div style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem'}}>&gt; 99% indicates structural identity</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">MSE (Mean Squared Error)</div>
+                    <div className="metric-value">{metrics.mse}</div>
+                    <div style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem'}}>&lt; 1.0 means negligible variance</div>
+                  </div>
+                </div>
+              )}
+
+              {(preview || resultImage) && (
+                <div className="image-viewer">
+                  {preview && (
+                    <div className="image-pane">
+                      <div className="image-label">Original Cover Image</div>
+                      <img src={preview} alt="Cover" />
+                    </div>
+                  )}
+                  {resultImage && (
+                    <div className="image-pane">
+                      <div className="image-label" style={{background: 'var(--primary)'}}>Stego Output Generated</div>
+                      <img src={resultImage} alt="Stego" />
+                      <a href={resultImage} download="stego.png" style={{position: 'absolute', bottom: '0.5rem', right: '0.5rem', background: 'var(--primary)', color: 'white', padding: '0.5rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none'}}>
+                        <Download size={16}/> Download
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '100%'}}>
+              {preview && (
+                <div className="image-pane" style={{height: '200px', flex: 'none'}}>
+                  <div className="image-label">Uploaded Stego Image</div>
+                  <img src={preview} alt="Stego Uploaded" />
+                </div>
+              )}
+              <div style={{flex: 1, background: 'var(--bg-dark)', borderRadius: '8px', border: '1px solid var(--border)', padding: '1.5rem'}}>
+                <h3 style={{color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem', textTransform: 'uppercase'}}>Decrypted Payload:</h3>
+                {extractedText ? (
+                  <div style={{fontSize: '1.25rem', color: 'var(--success)', wordBreak: 'break-all'}}>
+                    {extractedText}
+                  </div>
+                ) : (
+                  <div style={{color: 'var(--border)', fontStyle: 'italic'}}>
+                    Awaiting extraction pipeline...
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    minHeight: '100vh',
-    backgroundColor: '#0f172a',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: '20px',
-  },
-  card: {
-    backgroundColor: '#1e293b',
-    borderRadius: '16px',
-    padding: '40px',
-    maxWidth: '600px',
-    width: '100%',
-    boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
-  },
-  header: {
-    textAlign: 'center',
-    marginBottom: '30px',
-  },
-  title: {
-    color: '#f1f5f9',
-    fontSize: '28px',
-    margin: '10px 0',
-  },
-  subtitle: {
-    color: '#94a3b8',
-    fontSize: '14px',
-  },
-  toggleContainer: {
-    display: 'flex',
-    gap: '10px',
-    marginBottom: '20px',
-  },
-  toggleButton: {
-    flex: 1,
-    padding: '12px',
-    border: 'none',
-    borderRadius: '8px',
-    color: 'white',
-    cursor: 'pointer',
-    fontSize: '16px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-  },
-  uploadArea: {
-    marginBottom: '20px',
-  },
-  uploadLabel: {
-    cursor: 'pointer',
-    display: 'block',
-  },
-  preview: {
-    width: '100%',
-    maxHeight: '300px',
-    objectFit: 'contain',
-    borderRadius: '8px',
-  },
-  uploadPlaceholder: {
-    border: '2px dashed #475569',
-    borderRadius: '8px',
-    padding: '40px',
-    textAlign: 'center',
-    color: '#64748b',
-  },
-  textarea: {
-    width: '100%',
-    padding: '12px',
-    borderRadius: '8px',
-    border: '1px solid #475569',
-    backgroundColor: '#0f172a',
-    color: '#f1f5f9',
-    fontSize: '14px',
-    marginBottom: '20px',
-    resize: 'vertical',
-  },
-  input: {
-    width: '100%',
-    padding: '12px',
-    borderRadius: '8px',
-    border: '1px solid #475569',
-    backgroundColor: '#0f172a',
-    color: '#f1f5f9',
-    fontSize: '14px',
-    marginBottom: '20px',
-  },
-  submitButton: {
-    width: '100%',
-    padding: '14px',
-    backgroundColor: '#6366f1',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    marginBottom: '20px',
-  },
-  errorBox: {
-    backgroundColor: '#7f1d1d',
-    color: '#fca5a5',
-    padding: '12px',
-    borderRadius: '8px',
-    marginBottom: '20px',
-  },
-  resultBox: {
-    backgroundColor: '#14532d',
-    padding: '20px',
-    borderRadius: '8px',
-    marginBottom: '20px',
-    color: '#bbf7d0',
-  },
-  resultImage: {
-    width: '100%',
-    borderRadius: '8px',
-    margin: '10px 0',
-  },
-  downloadButton: {
-    backgroundColor: '#6366f1',
-    color: 'white',
-    border: 'none',
-    padding: '10px 20px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginTop: '10px',
-  },
-  secretDisplay: {
-    backgroundColor: '#0f172a',
-    padding: '12px',
-    borderRadius: '6px',
-    marginTop: '10px',
-    color: '#f1f5f9',
-  },
-  footer: {
-    textAlign: 'center',
-    color: '#64748b',
-    fontSize: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    marginTop: '20px',
-  },
-};
 
 export default App;
