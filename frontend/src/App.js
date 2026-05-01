@@ -15,6 +15,8 @@ function App() {
   const [metrics, setMetrics] = useState(null);
   const [error, setError] = useState('');
 
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
   const handleDrop = (e) => {
     e.preventDefault();
     const droppedFile = e.dataTransfer ? e.dataTransfer.files[0] : e.target.files[0];
@@ -45,7 +47,7 @@ function App() {
     formData.append('password', password);
 
     try {
-      const response = await fetch('http://localhost:5000/api/embed', {
+      const response = await fetch(`${API_BASE_URL}/api/embed`, {
         method: 'POST',
         body: formData,
       });
@@ -78,7 +80,7 @@ function App() {
     formData.append('password', password);
 
     try {
-      const response = await fetch('http://localhost:5000/api/extract', {
+      const response = await fetch(`${API_BASE_URL}/api/extract`, {
         method: 'POST',
         body: formData,
       });
