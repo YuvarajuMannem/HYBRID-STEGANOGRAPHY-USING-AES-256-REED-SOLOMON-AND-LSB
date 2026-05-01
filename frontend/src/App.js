@@ -110,10 +110,10 @@ function App() {
       <main className="main-content">
         <div className="left-panel panel">
           <div className="tabs">
-            <button className={`tab-btn ${mode === 'embed' ? 'active' : ''}`} onClick={() => {setMode('embed'); setFile(null); setPreview(null);}}>
+            <button className={`tab-btn ${mode === 'embed' ? 'active' : ''}`} onClick={() => {setMode('embed'); setFile(null); setPreview(null); setPassword('');}}>
               Encode Secret
             </button>
-            <button className={`tab-btn ${mode === 'extract' ? 'active' : ''}`} onClick={() => {setMode('extract'); setFile(null); setPreview(null);}}>
+            <button className={`tab-btn ${mode === 'extract' ? 'active' : ''}`} onClick={() => {setMode('extract'); setFile(null); setPreview(null); setPassword('');}}>
               Decode Stego
             </button>
           </div>
